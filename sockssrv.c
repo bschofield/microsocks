@@ -62,6 +62,7 @@
 
 static const char* auth_user;
 static const char* auth_pass;
+static unsigned timeout;
 static sblist* auth_ips;
 static pthread_rwlock_t auth_ips_lock = PTHREAD_RWLOCK_INITIALIZER;
 static const struct server* server;
@@ -268,10 +269,10 @@ static void copyloop(int fd1, int fd2) {
 	};
 
 	while(1) {
-		/* inactive connections are reaped after 15 min to free resources.
+		/* inactive connections are reaped after a time (by default 15 mins) to free resources.
 		   usually programs send keep-alive packets so this should only happen
 		   when a connection is really unused. */
-		switch(poll(fds, 2, 60*15*1000)) {
+		switch(poll(fds, 2, timeout*1000)) {
 			case 0:
 				send_error(fd1, EC_TTL_EXPIRED);
 				return;
@@ -380,10 +381,11 @@ static int usage(void) {
 	dprintf(2,
 		"MicroSocks SOCKS5 Server\n"
 		"------------------------\n"
-		"usage: microsocks -1 -i listenip -p port -u user -P password -b bindaddr\n"
+		"usage: microsocks -1 -i listenip -p port -u user -P password -b bindaddr -t timeout\n"
 		"all arguments are optional.\n"
 		"by default listenip is 0.0.0.0 and port 1080.\n\n"
 		"option -b specifies which ip outgoing connections are bound to\n"
+		"option -t specified the timeout for inactive connections in seconds (by default 900)\n"
 		"option -1 activates auth_once mode: once a specific ip address\n"
 		"authed successfully with user/pass, it is added to a whitelist\n"
 		"and may use the proxy without auth.\n"
@@ -425,6 +427,9 @@ int main(int argc, char** argv) {
 				break;
 			case 'p':
 				port = atoi(optarg);
+				break;
+			case 't':
+				timeout = atoi(optarg);
 				break;
 			case ':':
 				dprintf(2, "error: option -%c requires an operand\n", optopt);
