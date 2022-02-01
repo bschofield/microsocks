@@ -405,6 +405,7 @@ int main(int argc, char** argv) {
 	int ch;
 	const char *listenip = "0.0.0.0";
 	unsigned port = 1080;
+	timeout = 900;
 	while((ch = getopt(argc, argv, ":1b:i:p:u:P:t:")) != -1) {
 		switch(ch) {
 			case '1':
