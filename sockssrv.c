@@ -55,11 +55,12 @@
 #if defined(__APPLE__)
 #undef THREAD_STACK_SIZE
 #define THREAD_STACK_SIZE 64*1024
-#elif defined(__GLIBC__) || defined(__FreeBSD__)
+#elif defined(__GLIBC__) || defined(__FreeBSD__) || defined(__sun__)
 #undef THREAD_STACK_SIZE
 #define THREAD_STACK_SIZE 32*1024
 #endif
 
+static int quiet;
 static const char* auth_user;
 static const char* auth_pass;
 static unsigned timeout;
@@ -107,7 +108,7 @@ struct thread {
 /* we log to stderr because it's not using line buffering, i.e. malloc which would need
    locking when called from different threads. for the same reason we use dprintf,
    which writes directly to an fd. */
-#define dolog(...) dprintf(2, __VA_ARGS__)
+#define dolog(...) do { if(!quiet) dprintf(2, __VA_ARGS__); } while(0)
 #else
 static void dolog(const char* fmt, ...) { }
 #endif
@@ -380,9 +381,9 @@ static int usage(void) {
 	dprintf(2,
 		"MicroSocks SOCKS5 Server\n"
 		"------------------------\n"
-		"usage: microsocks -1 -i listenip -p port -u user -P password -b bindaddr -t timeout\n"
-		"all arguments are optional.\n"
+		"usage: microsocks -1 q -i listenip -p port -u user -P password -b bindaddr -t timeout\n"
 		"by default listenip is 0.0.0.0, port 1080 and timeout 900.\n\n"
+		"option -q disables logging.\n"
 		"option -b specifies which ip outgoing connections are bound to\n"
 		"option -t specified the timeout for inactive connections in seconds\n"
 		"option -1 activates auth_once mode: once a specific ip address\n"
@@ -410,6 +411,9 @@ int main(int argc, char** argv) {
 		switch(ch) {
 			case '1':
 				auth_ips = sblist_new(sizeof(union sockaddr_union), 8);
+				break;
+			case 'q':
+				quiet = 1;
 				break;
 			case 'b':
 				resolve_sa(optarg, 0, &bind_addr);
